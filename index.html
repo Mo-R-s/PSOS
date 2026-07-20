@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PSOS</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-32.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PSOS">
+<meta name="theme-color" content="#0e1015">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --void:#0e1015; --panel:#171a22; --panel-raised:#1e222c; --hairline:#2c3140;
+    --gold:#c9a227; --gold-dim:#8a7327; --blue:#3a5fa8; --blue-bright:#6c8fd4;
+    --ink:#f0eee6; --ink-dim:#9aa0ac; --ink-faint:#5c6270;
+    --good:#5a9c6e; --warn:#b8543a; --rose:#c47a94;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:var(--void);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600;margin:0;}
+  #app{max-width:640px;margin:0 auto;padding:20px 16px 100px;min-height:100%;}
+  .eyebrow{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;}
+  .screen{display:none;}
+  .screen.active{display:block;animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:.4;}to{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important;transition:none !important;} }
+
+  header.hero{padding:6px 0 20px;border-bottom:1px solid var(--hairline);margin-bottom:20px;position:relative;}
+  header.hero h1{font-size:26px;}
+  header.hero .meta{color:var(--ink-dim);font-size:13px;margin-top:4px;}
+  .gear-btn{position:absolute;top:2px;right:0;background:none;border:1px solid var(--hairline);color:var(--ink-dim);
+    border-radius:6px;width:36px;height:36px;font-size:16px;cursor:pointer;}
+  .gear-btn:active{border-color:var(--gold);color:var(--gold);}
+
+  .card{background:var(--panel);border:1px solid var(--hairline);border-radius:8px;padding:18px;margin-bottom:16px;}
+  .card h3{font-size:18px;margin-bottom:12px;}
+  .score-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .score-big{font-family:'Cormorant Garamond';font-size:52px;color:var(--gold);line-height:1;}
+  .score-sub{color:var(--ink-dim);font-size:13px;flex:1;min-width:150px;}
+  .score-delta{font-size:12px;font-variant-numeric:tabular-nums;}
+  .score-delta.up{color:var(--good);} .score-delta.down{color:var(--warn);}
+  .streak-badge{display:inline-block;font-size:11px;color:var(--gold);border:1px solid var(--gold-dim);
+    border-radius:12px;padding:3px 10px;margin-top:8px;}
+
+  .stat-line{display:grid;grid-template-columns:1fr 90px 44px;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--hairline);font-size:13.5px;}
+  .stat-line:last-child{border-bottom:none;}
+  .bar-track{height:6px;border-radius:3px;background:var(--hairline);overflow:hidden;}
+  .bar-fill{height:100%;border-radius:3px;background:var(--gold);transition:width .4s ease;}
+  .trend{font-size:12px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;}
+  .trend.up{color:var(--good);} .trend.down{color:var(--warn);} .trend.flat{color:var(--ink-faint);}
+
+  .alert{padding:10px 14px;border-radius:5px;background:rgba(184,84,58,.1);border-left:3px solid var(--warn);font-size:13px;color:var(--ink-dim);margin-bottom:8px;}
+  .alert.info{background:rgba(58,95,168,.1);border-left-color:var(--blue-bright);}
+  .alert strong{color:var(--ink);}
+  .rec-box{padding:14px 16px;background:var(--panel-raised);border-radius:6px;border-left:3px solid var(--gold);font-size:14px;line-height:1.55;color:var(--ink-dim);}
+  .rec-box strong{color:var(--ink);}
+  ol.focus-list{margin:0;padding-left:20px;font-size:14.5px;line-height:1.9;}
+
+  .domain-group{margin-bottom:22px;}
+  .domain-group h4{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px;}
+  .event-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .event-btn{background:var(--panel-raised);border:1px solid var(--hairline);color:var(--ink);border-radius:6px;padding:12px 10px;font-size:13px;text-align:left;cursor:pointer;line-height:1.35;min-height:52px;}
+  .event-btn:active{background:var(--gold);color:var(--void);border-color:var(--gold);}
+  .event-btn .impact{display:block;font-size:10.5px;color:var(--ink-faint);margin-top:4px;}
+  .event-btn:active .impact{color:rgba(14,16,21,.7);}
+
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--gold);color:var(--void);
+    padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;}
+  .toast.show{opacity:1;}
+
+  .log-item{font-size:12.5px;color:var(--ink-faint);padding:8px 0;border-bottom:1px solid var(--hairline);display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .log-item:last-child{border-bottom:none;}
+  .log-item .undo-x{background:none;border:1px solid var(--hairline);color:var(--ink-faint);border-radius:4px;
+    font-size:11px;padding:3px 8px;cursor:pointer;flex-shrink:0;}
+  .log-item .undo-x:active{border-color:var(--warn);color:var(--warn);}
+
+  input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{
+    background:var(--panel-raised);border:1px solid var(--hairline);color:var(--ink);
+    padding:11px 12px;border-radius:5px;font-size:14px;width:100%;font-family:'Inter';}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold-dim);}
+  label.field-label{display:block;font-size:12px;color:var(--ink-dim);margin:10px 0 5px;}
+  .btn{background:var(--gold);color:var(--void);border:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:5px;cursor:pointer;}
+  .btn:active{background:#dab53a;}
+  .btn.ghost{background:transparent;border:1px solid var(--hairline);color:var(--ink-dim);font-weight:500;}
+  .btn.ghost:active{border-color:var(--blue-bright);color:var(--ink);}
+  .btn.danger{background:transparent;border:1px solid var(--warn);color:var(--warn);font-weight:500;padding:6px 12px;font-size:12px;}
+  .btn.small{padding:7px 12px;font-size:12px;}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+
+  .project-item{padding:12px 0;border-bottom:1px solid var(--hairline);}
+  .project-item:last-child{border-bottom:none;}
+  .project-head{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px;gap:8px;}
+  .project-head .pct{color:var(--gold);font-weight:700;flex-shrink:0;}
+  .project-domain{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;}
+  .project-item .deadline{font-size:11.5px;color:var(--warn);margin-top:4px;}
+
+  .tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--hairline);
+    display:flex;justify-content:space-around;padding:8px 2px calc(8px + env(safe-area-inset-bottom));z-index:40;}
+  .tab-btn{background:none;border:none;color:var(--ink-faint);font-family:'Inter';font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 4px;flex:1;min-width:0;}
+  .tab-btn .dot{width:5px;height:5px;border-radius:50%;background:transparent;}
+  .tab-btn.active{color:var(--gold);}
+  .tab-btn.active .dot{background:var(--gold);}
+  .tab-icon{font-size:17px;line-height:1;}
+
+  .review-q{margin-bottom:16px;}
+  .review-q label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;}
+  .note{font-size:12px;color:var(--ink-faint);margin-top:8px;line-height:1.6;}
+  .divider{border-top:1px solid var(--hairline);margin:16px 0;}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+
+  .pie-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap;}
+  .pie-wrap canvas{flex:0 0 auto;}
+  .pie-legend{flex:1;min-width:160px;}
+  .pie-legend .stat-line{grid-template-columns:14px 1fr 44px;}
+  .pie-swatch{width:10px;height:10px;border-radius:2px;}
+
+  .email-item{padding:12px 0;border-bottom:1px solid var(--hairline);}
+  .email-item:last-child{border-bottom:none;}
+  .email-from{font-size:12px;color:var(--ink-faint);}
+  .email-subject{font-size:14px;color:var(--ink);margin:3px 0;}
+  .email-snippet{font-size:12.5px;color:var(--ink-dim);line-height:1.5;}
+  .email-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    padding:2px 7px;border-radius:3px;background:rgba(201,162,39,.15);color:var(--gold);margin-bottom:4px;}
+  .email-actions{margin-top:8px;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--hairline);border-top-color:var(--gold);
+    border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .diag-line{font-size:13px;padding:7px 0;border-bottom:1px solid var(--hairline);display:flex;gap:10px;align-items:flex-start;line-height:1.5;}
+  .diag-line:last-child{border-bottom:none;}
+  .diag-mark{flex-shrink:0;font-weight:700;width:18px;text-align:center;}
+  .diag-mark.pass{color:var(--good);} .diag-mark.fail{color:var(--warn);} .diag-mark.wait{color:var(--ink-faint);}
+  .diag-body{color:var(--ink-dim);}
+  .diag-body strong{color:var(--ink);}
+
+  .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;}
+  .toggle-row .t-label{font-size:14px;}
+  .toggle-row .t-sub{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+  .switch{position:relative;width:46px;height:26px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider-t{position:absolute;inset:0;background:var(--hairline);border-radius:13px;transition:.2s;cursor:pointer;}
+  .slider-t:before{content:'';position:absolute;height:20px;width:20px;left:3px;top:3px;background:var(--ink-dim);border-radius:50%;transition:.2s;}
+  .switch input:checked + .slider-t{background:var(--gold-dim);}
+  .switch input:checked + .slider-t:before{transform:translateX(20px);background:var(--gold);}
+
+  .secret-wrap{position:relative;}
+  .secret-wrap .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:15px;padding:4px;}
+
+  .note-item{padding:10px 0;border-bottom:1px solid var(--hairline);}
+  .note-item:last-child{border-bottom:none;}
+  .note-text{font-size:13px;color:var(--ink);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+  .note-meta{font-size:11px;color:var(--ink-faint);margin-top:4px;display:flex;justify-content:space-between;align-items:center;}
+
+  .meeting-item{padding:10px 0;border-bottom:1px solid var(--hairline);font-size:13.5px;}
+  .meeting-item:last-child{border-bottom:none;}
+  .meeting-when{color:var(--gold);font-size:12px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ DASHBOARD ============ -->
+  <div class="screen active" id="screen-dashboard">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Executive Dashboard</div>
+      <h1 id="greeting">Good Day, Maurice</h1>
+      <div class="meta" id="dateMeta"></div>
+      <button class="gear-btn" onclick="showScreen('settings')" aria-label="Settings">⚙</button>
+    </header>
+
+    <div class="card">
+      <div class="score-row">
+        <div class="score-big" id="strategicScore">--</div>
+        <div class="score-sub">Today's Strategic Score
+          <span class="score-delta" id="scoreDelta"></span><br>
+          <span id="scoreQualifier"></span>
+        </div>
+      </div>
+      <div class="streak-badge" id="streakBadge" style="display:none;"></div>
+    </div>
+
+    <div class="card" id="alertsCard">
+      <h3>Critical Alerts</h3>
+      <div id="alertsList"></div>
+    </div>
+
+    <div class="card">
+      <h3>Recommended Focus</h3>
+      <ol class="focus-list" id="focusList"></ol>
+      <div class="divider"></div>
+      <div class="rec-box" id="dashRecBox"></div>
+    </div>
+
+    <div class="card">
+      <h3>Executive Health <span style="font-size:11px;color:var(--ink-faint);font-family:Inter;">· 7-day change</span></h3>
+      <div id="healthList"></div>
+    </div>
+
+    <div class="card">
+      <h3>Energy Distribution — Last 30 Days</h3>
+      <div class="pie-wrap">
+        <canvas id="energyPie" width="180" height="180"></canvas>
+        <div class="pie-legend" id="pieLegend"></div>
+      </div>
+      <div class="note" id="pieNote"></div>
+    </div>
+  </div>
+
+  <!-- ============ EVENTS ============ -->
+  <div class="screen" id="screen-events">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Events</div>
+      <h1>What happened?</h1>
+      <div class="meta">Tap to log. Mis-tap? Undo from the log below.</div>
+    </header>
+    <div id="eventGroups"></div>
+
+    <div class="card">
+      <h3>Custom Event</h3>
+      <label class="field-label">Label</label>
+      <input type="text" id="customLabel" placeholder="e.g. Met the Speaker">
+      <label class="field-label">Domain</label>
+      <select id="customDomain"></select>
+      <label class="field-label">Impact on that domain's primary stock (-5 to +5)</label>
+      <input type="number" id="customImpact" value="1" min="-5" max="5" step="0.5">
+      <label class="field-label">Energy cost (-10 to +10, negative = tiring)</label>
+      <input type="number" id="customEnergy" value="-1" min="-10" max="10" step="0.5">
+      <div style="margin-top:12px;"><button class="btn" onclick="logCustomEvent()">Log Event</button></div>
+    </div>
+
+    <div class="card">
+      <h3>Captured Notes</h3>
+      <div class="note" style="margin-top:0;">Share text to PSOS from any app (WhatsApp, browser…) via Android's Share menu, or add one manually. Curated by you — nothing is scraped.</div>
+      <label class="field-label">New note</label>
+      <textarea rows="2" id="manualNote" placeholder="Paste or type anything worth keeping"></textarea>
+      <div style="margin-top:10px;"><button class="btn ghost small" onclick="addManualNote()">Save Note</button></div>
+      <div id="notesList" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
+      <h3>Recent Log</h3>
+      <div id="recentLog"></div>
+    </div>
+  </div>
+
+  <!-- ============ PORTFOLIO ============ -->
+  <div class="screen" id="screen-portfolio">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Portfolio</div>
+      <h1>Strategic Capital</h1>
+      <div class="meta">Thirteen stocks. Each decays if neglected, compounds if fed.</div>
+    </header>
+    <div id="portfolioGroups"></div>
+  </div>
+
+  <!-- ============ PROJECTS ============ -->
+  <div class="screen" id="screen-projects">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Projects</div>
+      <h1>Active Initiatives</h1>
+      <div class="meta" id="projectCountMeta"></div>
+    </header>
+    <div class="card"><div id="projectList"></div></div>
+    <div class="card">
+      <h3>Add Project</h3>
+      <label class="field-label">Name</label>
+      <input type="text" id="newProjectLabel" placeholder="e.g. SOA Office Construction">
+      <label class="field-label">Domain</label>
+      <select id="newProjectDomain"></select>
+      <label class="field-label">Progress (%)</label>
+      <input type="number" id="newProjectProgress" value="0" min="0" max="100">
+      <label class="field-label">Deadline (optional)</label>
+      <input type="date" id="newProjectDeadline">
+      <div style="margin-top:12px;"><button class="btn" onclick="addProject()">Add Project</button></div>
+    </div>
+  </div>
+
+  <!-- ============ WORK ============ -->
+  <div class="screen" id="screen-work">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Work Desk</div>
+      <h1>Inbox &amp; Meetings</h1>
+      <div class="meta" id="workMeta">Gmail &amp; Calendar via your private bridge.</div>
+    </header>
+
+    <div class="card" id="workNotConfigured" style="display:none;">
+      <div class="rec-box">Bridge not connected yet. Set it up under <strong>Settings ⚙ → Gmail Bridge</strong> — the diagnostic there will walk you through any failure step by step.
+        <div style="margin-top:10px;"><button class="btn small" onclick="showScreen('settings')">Open Settings</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between">
+        <h3>Recent Inbox</h3>
+        <button class="btn ghost small" onclick="loadInbox()">Refresh</button>
+      </div>
+      <div id="inboxList"><div class="note">Connect the bridge in Settings, then refresh. Meeting-like emails get flagged with a one-tap "Draft meeting" shortcut.</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Set Up a Meeting</h3>
+      <label class="field-label">Title</label>
+      <input type="text" id="mtgTitle" placeholder="e.g. SOA Tender Review">
+      <label class="field-label">Date</label>
+      <input type="date" id="mtgDate">
+      <label class="field-label">Start time (24h, e.g. 14:30)</label>
+      <input type="text" id="mtgTime" placeholder="14:30" inputmode="numeric">
+      <label class="field-label">Duration (minutes)</label>
+      <input type="number" id="mtgDuration" value="60" min="15" step="15">
+      <label class="field-label">Attendee emails (comma-separated, optional)</label>
+      <input type="text" id="mtgGuests" placeholder="kevin@example.com, aggrey@example.com">
+      <label class="field-label">Notes (optional)</label>
+      <textarea rows="2" id="mtgNotes"></textarea>
+      <div style="margin-top:12px;"><button class="btn" onclick="createMeeting()">Create Calendar Event</button></div>
+      <div id="mtgStatus" class="note"></div>
+    </div>
+
+    <div class="card">
+      <h3>Upcoming (created here)</h3>
+      <div id="meetingsList"><div class="note">Meetings you create through PSOS appear here and feed your reminders.</div></div>
+    </div>
+  </div>
+
+  <!-- ============ ADVISOR ============ -->
+  <div class="screen" id="screen-advisor">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Chief of Staff</div>
+      <h1>Decision Support</h1>
+      <div class="meta">Deterministic rules over your own data — honest about not being an LLM.</div>
+    </header>
+
+    <div class="card">
+      <h3>Hour Allocator</h3>
+      <label class="field-label">Hours available this week</label>
+      <input type="number" id="hoursAvailable" value="15" min="1" max="80">
+      <div style="margin-top:12px;"><button class="btn" onclick="runAllocator()">Allocate</button></div>
+      <div id="allocatorResult" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <h3>Pause-Impact Preview</h3>
+      <label class="field-label">If this domain received zero hours for 90 days:</label>
+      <select id="pauseDomain"></select>
+      <div style="margin-top:12px;"><button class="btn" onclick="runPausePreview()">Preview</button></div>
+      <div id="pauseResult" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- ============ REVIEW ============ -->
+  <div class="screen" id="screen-review">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Weekly Review</div>
+      <h1>Sunday Reckoning</h1>
+      <div class="meta" id="reviewWeekMeta"></div>
+    </header>
+
+    <div class="card">
+      <h3>This Week's Movement</h3>
+      <div id="weeklyMovement"></div>
+    </div>
+
+    <div class="card">
+      <h3>Biggest Win / Biggest Loss</h3>
+      <div id="winLoss"></div>
+    </div>
+
+    <div class="card">
+      <h3>Four Questions</h3>
+      <div class="review-q"><label>What created the most value this week?</label><textarea rows="2" id="q1"></textarea></div>
+      <div class="review-q"><label>What consumed time but created little value?</label><textarea rows="2" id="q2"></textarea></div>
+      <div class="review-q"><label>Which project moved closest to completion?</label><textarea rows="2" id="q3"></textarea></div>
+      <div class="review-q"><label>What should permanently leave the portfolio?</label><textarea rows="2" id="q4"></textarea></div>
+      <button class="btn" onclick="saveReview()">Save This Week's Review</button>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="screen" id="screen-settings">
+    <header class="hero">
+      <div class="eyebrow">PSOS · Settings</div>
+      <h1>System</h1>
+      <div class="meta">Bridge, reminders, and your data.</div>
+    </header>
+
+    <div class="card">
+      <h3>Gmail Bridge</h3>
+      <label class="field-label">Bridge URL (ends in /exec)</label>
+      <input type="text" id="bridgeUrl" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label class="field-label">Shared secret</label>
+      <div class="secret-wrap">
+        <input type="password" id="bridgeSecret" placeholder="exactly as on line 8 of the script" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button class="eye" onclick="toggleSecret()" aria-label="Show secret">👁</button>
+      </div>
+      <div class="note" id="secretHint"></div>
+      <div style="margin-top:12px;" class="row">
+        <button class="btn" onclick="saveBridgeSettings(true)">Save</button>
+        <button class="btn ghost" onclick="runDiagnostic()">Run Diagnostic</button>
+      </div>
+      <div id="diagResults" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <h3>Reminders</h3>
+      <div class="toggle-row">
+        <div>
+          <div class="t-label">Deadline &amp; meeting reminders</div>
+          <div class="t-sub">Fires while PSOS is open or recently used. Project deadlines within 48h; meetings within 24h.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="notifyToggle" onchange="toggleNotifications(this.checked)">
+          <span class="slider-t"></span>
+        </label>
+      </div>
+      <div class="note" id="notifyStatus"></div>
+    </div>
+
+    <div class="card">
+      <h3>Your Data</h3>
+      <div class="note" style="margin-top:0;margin-bottom:12px;">Everything lives on this device only. Back it up before reinstalling or switching phones — this is the lesson of every debugging night.</div>
+      <div class="row">
+        <button class="btn" onclick="exportBackup()">Export Backup</button>
+        <button class="btn ghost" onclick="document.getElementById('importFile').click()">Import Backup</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none;" onchange="importBackup(this.files[0])">
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <button class="btn danger" onclick="resetApp()">Reset App (erases everything)</button>
+      </div>
+      <div class="note" id="dataStatus"></div>
+    </div>
+
+    <div class="card">
+      <h3>About</h3>
+      <div class="note" style="margin-top:0;">PSOS v2 · schema <span id="schemaVer"></span> · <span id="eventCount"></span> events logged · built for Maurice Muhumuza. Local-first: no server, no account, no tracking.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="tabbar">
+  <button class="tab-btn active" data-screen="dashboard" onclick="showScreen('dashboard')"><span class="tab-icon">◆</span>Dash<span class="dot"></span></button>
+  <button class="tab-btn" data-screen="events" onclick="showScreen('events')"><span class="tab-icon">＋</span>Events<span class="dot"></span></button>
+  <button class="tab-btn" data-screen="portfolio" onclick="showScreen('portfolio')"><span class="tab-icon">▤</span>Portfolio<span class="dot"></span></button>
+  <button class="tab-btn" data-screen="projects" onclick="showScreen('projects')"><span class="tab-icon">▦</span>Projects<span class="dot"></span></button>
+  <button class="tab-btn" data-screen="work" onclick="showScreen('work')"><span class="tab-icon">✉</span>Work<span class="dot"></span></button>
+  <button class="tab-btn" data-screen="advisor" onclick="showScreen('advisor')"><span class="tab-icon">☆</span>Advisor<span class="dot"></span></button>
+  <button class="tab-btn" data-screen="review" onclick="showScreen('review')"><span class="tab-icon">↻</span>Review<span class="dot"></span></button>
+</div>
+
+<script>
+/* ================================================================
+   PSOS v2 — single-file application
+   Sections: config · state/migration · time processing · events ·
+   navigation · dashboard · pie · portfolio · projects · advisor ·
+   review · work/bridge · diagnostic · notes/share · notifications ·
+   settings/backup · init
+================================================================ */
+
+/* ---------------- CONFIG ---------------- */
+
+const SCHEMA_VERSION = 2;
+const STORAGE_KEY = 'psos_state_v1'; // kept stable so v1 installs migrate in place
+
+const STOCK_CONFIG = [
+  {id:'political', label:'Political Capital', group:'Public & Political', target:80, decay:0.010, weight:10},
+  {id:'trust', label:'Institutional Trust', group:'Public & Political', target:90, decay:0.006, weight:9},
+  {id:'sports', label:'Global Sports Capital (Cheza)', group:'Public & Political', target:75, decay:0.009, weight:8},
+  {id:'campaign', label:'Campaign Readiness (PLU)', group:'Public & Political', target:70, decay:0.008, weight:7},
+  {id:'legal', label:'Legal Reputation', group:'Enterprise', target:75, decay:0.008, weight:7},
+  {id:'soaEquity', label:'SOA Equity', group:'Enterprise', target:80, decay:0.010, weight:9},
+  {id:'digitalEquity', label:'Digital Ventures (NGA + iStartApp)', group:'Enterprise', target:75, decay:0.011, weight:8},
+  {id:'liquidity', label:'Financial Liquidity', group:'Enterprise', target:75, decay:0.004, weight:8},
+  {id:'energy', label:'Energy', group:'Personal', target:65, decay:0, weight:0},
+  {id:'learning', label:'Learning Capital', group:'Personal', target:90, decay:0.004, weight:6},
+  {id:'relational', label:'Relational Capital', group:'Personal', target:65, decay:0.015, weight:9},
+  {id:'execution', label:'Execution Capacity', group:'Personal', target:75, decay:0.008, weight:8},
+  {id:'decisionQuality', label:'Decision Quality', group:'Personal', target:75, decay:0.005, weight:7},
+];
+
+const DOMAINS = [
+  {id:'parliament', label:'Parliament / Committee Clerk', primary:'political', weight:10},
+  {id:'fpicglr', label:'FP-ICGLR Delegation', primary:'political', weight:8},
+  {id:'cheza', label:'Cheza / Kwepena (Gen. Secretary)', primary:'sports', weight:8},
+  {id:'campaign', label:'PLU Campaign Groundwork', primary:'campaign', weight:6},
+  {id:'legal', label:'Legal Practice', primary:'legal', weight:7},
+  {id:'soa', label:'SOA Construction Co.', primary:'soaEquity', weight:9},
+  {id:'nga', label:'Nondescript Gaming Africa', primary:'digitalEquity', weight:7},
+  {id:'istartapp', label:'iStartApp', primary:'digitalEquity', weight:7},
+  {id:'relational', label:'Relational / Courtship', primary:'relational', weight:8},
+  {id:'learning', label:'Learning / CS Study', primary:'learning', weight:5},
+  {id:'rest', label:'Rest / Recovery', primary:'energy', weight:9},
+];
+
+const EVENT_CATALOG = [
+  {domain:'parliament', label:'Attended Committee Session', deltas:{political:2, trust:3, energy:-1}},
+  {domain:'parliament', label:'Drafted Committee Report', deltas:{political:1, execution:1, trust:1, energy:-2}},
+  {domain:'parliament', label:'Plenary / Floor Business', deltas:{political:1.5, trust:1, energy:-1.5}},
+  {domain:'fpicglr', label:'FP-ICGLR Delegation Work', deltas:{political:1.5, trust:1, energy:-1.5}},
+  {domain:'cheza', label:'Cheza Federation Work', deltas:{sports:2, trust:1, energy:-1}},
+  {domain:'campaign', label:'PLU Campaign Groundwork', deltas:{campaign:2, political:0.3, energy:-1.5}},
+  {domain:'campaign', label:'Constituency Visit', deltas:{campaign:2.5, trust:0.5, energy:-2}},
+  {domain:'legal', label:'Court Appearance', deltas:{legal:2, liquidity:1, energy:-2}},
+  {domain:'legal', label:'Legal Research / Drafting', deltas:{legal:1, learning:0.5, energy:-1}},
+  {domain:'legal', label:'Client Meeting', deltas:{legal:1, liquidity:0.5, trust:0.3, energy:-1}},
+  {domain:'soa', label:'SOA Site / Tender Work', deltas:{soaEquity:2, liquidity:1, execution:0.5, energy:-2}},
+  {domain:'soa', label:'SOA Founders / Governance Meeting', deltas:{soaEquity:1, trust:0.5, energy:-1}},
+  {domain:'nga', label:'NGA Sponsorship / Partner Work', deltas:{digitalEquity:1.5, liquidity:0.5, energy:-1.5}},
+  {domain:'nga', label:'NGA Event / Tournament', deltas:{digitalEquity:2, trust:0.5, energy:-2.5}},
+  {domain:'istartapp', label:'iStartApp Product / Partnership Work', deltas:{digitalEquity:1.5, execution:0.5, energy:-1.5}},
+  {domain:'relational', label:'Courtship / Social Time', deltas:{relational:2.5, energy:1}},
+  {domain:'relational', label:'Family Time', deltas:{relational:1, energy:2}},
+  {domain:'learning', label:'Study / Reading (incl. CS)', deltas:{learning:1.5, execution:0.3}},
+  {domain:'rest', label:'Workout', deltas:{energy:3, decisionQuality:1}},
+  {domain:'rest', label:'Rest Day / Sabbath', deltas:{energy:5, decisionQuality:1}},
+  {domain:'rest', label:'Worked Past Midnight', deltas:{energy:-5, decisionQuality:-2, execution:-1}},
+  {domain:'rest', label:'Skipped Rest', deltas:{energy:-4, decisionQuality:-1.5}},
+];
+
+const DOMAIN_GROUP_ORDER = [
+  {group:'Public & Political', domains:['parliament','fpicglr','cheza','campaign']},
+  {group:'Enterprise', domains:['legal','soa','nga','istartapp']},
+  {group:'Personal', domains:['relational','learning','rest']},
+];
+
+const MEETING_KEYWORDS = /\b(meet|meeting|schedule|call|appointment|invite|invitation|catch ?up|discussion|zoom|teams|google meet|avail(ability|able))\b/i;
+const PIE_COLORS = ['#c9a227','#3a5fa8','#5a9c6e','#c47a94','#7a7f8c','#e0c04d','#6c8fd4','#b8543a','#8a6fd4','#a68a3f','#e0ddd0'];
+
+/* ---------------- STATE & MIGRATION ---------------- */
+
+function todayStr(d=new Date()){ return d.toISOString().slice(0,10); }
+function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function seedState(){
+  const stocks = {};
+  STOCK_CONFIG.forEach(s => stocks[s.id] = 60);
+  Object.assign(stocks, {political:72, trust:91, sports:68, legal:63, soaEquity:45,
+    digitalEquity:55, liquidity:54, learning:91, execution:46, decisionQuality:60,
+    energy:65, relational:32, campaign:28});
+  return {
+    schema: SCHEMA_VERSION,
+    stocks,
+    lastProcessedDate: todayStr(),
+    history: [{date: todayStr(), stocks: {...stocks}}],
+    events: [],
+    projects: [
+      {id:'p1', label:'FY2026/27 Committee Work Plan — finalization', domain:'parliament', progress:80, deadline:''},
+      {id:'p2', label:'SOA Office / Site Setup', domain:'soa', progress:45, deadline:''},
+      {id:'p3', label:'NGA MTN Sponsorship Activation', domain:'nga', progress:55, deadline:''},
+    ],
+    meetings: [],
+    notes: [],
+    reviews: {},
+    settings: {bridgeUrl:'', bridgeSecret:'', notifyEnabled:false},
+    notified: {}
+  };
+}
+
+function migrate(parsed){
+  if(!parsed.schema || parsed.schema < 2){
+    parsed.schema = 2;
+    if(!parsed.meetings) parsed.meetings = [];
+    if(!parsed.notes) parsed.notes = [];
+    if(!parsed.notified) parsed.notified = {};
+    if(!parsed.reviews) parsed.reviews = {};
+    if(!parsed.settings) parsed.settings = {bridgeUrl:'', bridgeSecret:'', notifyEnabled:false};
+    if(parsed.settings.notifyEnabled === undefined) parsed.settings.notifyEnabled = false;
+  }
+  STOCK_CONFIG.forEach(s => { if(!(s.id in parsed.stocks)) parsed.stocks[s.id] = s.target*0.6; });
+  return parsed;
+}
+
+let STATE = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return seedState();
+    return migrate(JSON.parse(raw));
+  }catch(e){
+    console.warn('PSOS: storage unreadable, starting fresh', e);
+    return seedState();
+  }
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
+  catch(e){ console.warn('PSOS: could not persist', e); showToast('Warning: could not save'); }
+}
+
+/* ---------------- TIME / DECAY ---------------- */
+
+function processElapsedDays(){
+  const last = new Date(STATE.lastProcessedDate);
+  const today = new Date(todayStr());
+  let days = clamp(Math.round((today - last)/86400000), 0, 90);
+  for(let i=0;i<days;i++){
+    STOCK_CONFIG.forEach(cfg=>{
+      if(cfg.id === 'energy'){
+        STATE.stocks.energy += (cfg.target - STATE.stocks.energy)*0.04;
+      } else {
+        STATE.stocks[cfg.id] *= (1 - cfg.decay);
+      }
+      STATE.stocks[cfg.id] = clamp(STATE.stocks[cfg.id], 0, 100);
+    });
+  }
+  STATE.lastProcessedDate = todayStr();
+  if(!STATE.history.some(h=>h.date===todayStr())){
+    STATE.history.push({date: todayStr(), stocks: {...STATE.stocks}});
+    if(STATE.history.length > 180) STATE.history.shift();
+  }
+  saveState();
+}
+
+function snapshotDaysAgo(n){
+  const target = new Date(); target.setDate(target.getDate()-n);
+  const targetStr = todayStr(target);
+  let best = STATE.history[0];
+  for(const h of STATE.history){ if(h.date <= targetStr) best = h; }
+  return best;
+}
+
+function lastTouched(domainId){
+  for(let i=STATE.events.length-1;i>=0;i--){
+    if(STATE.events[i].domain===domainId) return STATE.events[i].ts;
+  }
+  return null;
+}
+function daysSince(iso){ return iso ? Math.floor((Date.now()-new Date(iso).getTime())/86400000) : null; }
+
+/* ---------------- EVENTS ---------------- */
+
+function applyEvent(domain, label, deltas){
+  Object.keys(deltas).forEach(k=>{ STATE.stocks[k] = clamp(STATE.stocks[k]+deltas[k], 0, 100); });
+  STATE.events.push({id:'e'+Date.now()+Math.random().toString(36).slice(2,6), ts:new Date().toISOString(), domain, label, deltas});
+  if(STATE.events.length > 800) STATE.events.shift();
+  saveState(); renderAll();
+}
+
+function logEvent(idx){
+  const ev = EVENT_CATALOG[idx];
+  applyEvent(ev.domain, ev.label, ev.deltas);
+  showToast(ev.label + ' logged');
+}
+
+function undoEvent(id){
+  const idx = STATE.events.findIndex(e=>e.id===id);
+  if(idx<0) return;
+  const ev = STATE.events[idx];
+  Object.keys(ev.deltas).forEach(k=>{ STATE.stocks[k] = clamp(STATE.stocks[k]-ev.deltas[k], 0, 100); });
+  STATE.events.splice(idx,1);
+  saveState(); renderAll();
+  showToast('Undone: ' + ev.label);
+}
+
+function logCustomEvent(){
+  const label = document.getElementById('customLabel').value.trim() || 'Custom Event';
+  const domainId = document.getElementById('customDomain').value;
+  const impact = Number(document.getElementById('customImpact').value)||0;
+  const energyCost = Number(document.getElementById('customEnergy').value)||0;
+  const domainCfg = DOMAINS.find(d=>d.id===domainId);
+  const deltas = {};
+  if(domainCfg) deltas[domainCfg.primary] = (deltas[domainCfg.primary]||0)+impact;
+  deltas.energy = (deltas.energy||0)+energyCost;
+  applyEvent(domainId, label, deltas);
+  document.getElementById('customLabel').value='';
+  showToast('Logged: '+label);
+}
+
+let toastTimer=null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------------- NAVIGATION ---------------- */
+
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.screen===name));
+  window.scrollTo(0,0);
+  if(name==='dashboard') renderEnergyPie();
+  if(name==='settings') renderSettings();
+}
+
+/* ---------------- DASHBOARD ---------------- */
+
+function computeStrategicScore(stocks){
+  const s = stocks || STATE.stocks;
+  const w = STOCK_CONFIG.filter(x=>x.id!=='energy').reduce((acc,x)=>{
+    acc.sum += s[x.id]*x.weight; acc.wsum += x.weight; return acc;
+  },{sum:0,wsum:0});
+  let score = w.sum/w.wsum;
+  if(s.energy < 50) score -= (50-s.energy)*0.3;
+  return clamp(score,0,100);
+}
+
+function trendArrow(stockId, days=7){
+  const past = snapshotDaysAgo(days).stocks[stockId];
+  const now = STATE.stocks[stockId];
+  const delta = now-(past===undefined?now:past);
+  if(Math.abs(delta) < 1) return {symbol:'►', cls:'flat', delta};
+  return delta>0 ? {symbol:'▲', cls:'up', delta} : {symbol:'▼', cls:'down', delta};
+}
+
+function computeStreak(){
+  let streak = 0;
+  const d = new Date();
+  for(;;){
+    const ds = todayStr(d);
+    const has = STATE.events.some(e=>e.ts.slice(0,10)===ds);
+    if(has){ streak++; d.setDate(d.getDate()-1); }
+    else if(streak===0 && ds===todayStr()){ d.setDate(d.getDate()-1); } // today empty doesn't break streak yet
+    else break;
+    if(streak>365) break;
+  }
+  return streak;
+}
+
+function renderDashboard(){
+  const now = new Date();
+  document.getElementById('dateMeta').textContent =
+    now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) + ' · ' +
+    now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const hour = now.getHours();
+  document.getElementById('greeting').textContent = hour<12?'Good Morning, Maurice':hour<17?'Good Afternoon, Maurice':'Good Evening, Maurice';
+
+  const score = computeStrategicScore();
+  const pastScore = computeStrategicScore(snapshotDaysAgo(7).stocks);
+  const sd = score - pastScore;
+  document.getElementById('strategicScore').textContent = Math.round(score);
+  const deltaEl = document.getElementById('scoreDelta');
+  deltaEl.textContent = (sd>=0?'+':'')+sd.toFixed(1)+' this week';
+  deltaEl.className = 'score-delta ' + (sd>=0?'up':'down');
+  document.getElementById('scoreQualifier').textContent =
+    score>=80?'Strong — protect the loops that got you here.':
+    score>=60?'Stable — bandwidth is the constraint, not opportunity.':
+    score>=40?'Strained — something in the portfolio needs to give.':
+    'Critical — stop starting, start finishing.';
+
+  const streak = computeStreak();
+  const badge = document.getElementById('streakBadge');
+  if(streak>=2){ badge.style.display='inline-block'; badge.textContent = '◆ '+streak+'-day logging streak'; }
+  else badge.style.display='none';
+
+  // Alerts
+  const alerts = [];
+  if(STATE.stocks.energy < 40)
+    alerts.push({type:'warn', html:`<strong>Energy critically low</strong> (${Math.round(STATE.stocks.energy)}/100) — avoid starting new commitments today.`});
+  DOMAINS.forEach(d=>{
+    const ds = daysSince(lastTouched(d.id));
+    if(ds !== null && ds >= 14 && d.id!=='rest')
+      alerts.push({type:'warn', html:`<strong>${d.label}</strong> — no logged work in ${ds} days.`});
+  });
+  const active = STATE.projects.filter(p=>p.progress<100);
+  if(active.length > 9)
+    alerts.push({type:'warn', html:`Carrying <strong>${active.length} active projects</strong> — success rates drop sharply above 9.`});
+  STATE.projects.forEach(p=>{
+    if(p.deadline && p.progress<100){
+      const dd = Math.ceil((new Date(p.deadline)-now)/86400000);
+      if(dd>=0 && dd<=3) alerts.push({type:'info', html:`<strong>${escapeHtml(p.label)}</strong> due in ${dd} day${dd===1?'':'s'}, at ${p.progress}%.`});
+      if(dd<0) alerts.push({type:'warn', html:`<strong>${escapeHtml(p.label)}</strong> is ${-dd} day${dd===-1?'':'s'} past deadline, at ${p.progress}%.`});
+    }
+  });
+  STATE.meetings.filter(m=>{
+    const t = new Date(m.dateTime).getTime();
+    return t>Date.now() && t-Date.now() < 24*3600000;
+  }).forEach(m=>{
+    alerts.push({type:'info', html:`Meeting <strong>${escapeHtml(m.title)}</strong> at ${new Date(m.dateTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}.`});
+  });
+  document.getElementById('alertsList').innerHTML = alerts.length
+    ? alerts.map(a=>`<div class="alert ${a.type==='info'?'info':''}">${a.html}</div>`).join('')
+    : `<div class="note">No critical alerts. Steady state.</div>`;
+
+  // Focus
+  const candidates = DOMAINS.filter(d=>d.id!=='rest').map(d=>{
+    const cfg = STOCK_CONFIG.find(s=>s.id===d.primary);
+    const gap = Math.max(0, cfg.target - STATE.stocks[d.primary]);
+    const ds = daysSince(lastTouched(d.id)) || 0;
+    return {domain:d, urgency:(gap/100)*d.weight*(1+ds/14)};
+  }).sort((a,b)=>b.urgency-a.urgency);
+
+  const focusList = document.getElementById('focusList');
+  const rec = document.getElementById('dashRecBox');
+  if(STATE.stocks.energy < 45){
+    focusList.innerHTML = `<li>Rest / Recovery</li>` + candidates.slice(0,2).map(c=>`<li>${c.domain.label}</li>`).join('');
+    rec.innerHTML = `<strong>Do not start new work today.</strong> Energy is the binding constraint — every other stock's growth is discounted while it stays this low.`;
+  } else {
+    focusList.innerHTML = candidates.slice(0,3).map(c=>`<li>${c.domain.label}</li>`).join('') + `<li>Rest</li>`;
+    const top = candidates[0];
+    const stale = daysSince(lastTouched(top.domain.id));
+    rec.innerHTML = `<strong>${top.domain.label}</strong> carries the highest urgency — furthest below target for its weight${stale?`, untouched for ${stale} days`:''}. Give it the first block of the day.`;
+  }
+
+  // Health
+  const keyStocks = ['political','trust','soaEquity','digitalEquity','liquidity','energy','learning','relational'];
+  document.getElementById('healthList').innerHTML = keyStocks.map(id=>{
+    const cfg = STOCK_CONFIG.find(s=>s.id===id);
+    const val = STATE.stocks[id];
+    const t = trendArrow(id);
+    return `<div class="stat-line">
+      <span>${cfg.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${val}%"></div></div>
+      <span class="trend ${t.cls}">${t.symbol} ${Math.abs(t.delta)>=1?(t.delta>0?'+':'')+t.delta.toFixed(0):''}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- ENERGY PIE ---------------- */
+
+let pieAnimFrame = null;
+
+function energyByDomain(){
+  const cutoff = Date.now() - 30*86400000;
+  const totals = {};
+  STATE.events.forEach(e=>{
+    if(new Date(e.ts).getTime() < cutoff) return;
+    const cost = Math.max(0, -(e.deltas.energy||0));
+    if(cost>0) totals[e.domain] = (totals[e.domain]||0)+cost;
+  });
+  return DOMAINS.map((d,i)=>({label:d.label, value:totals[d.id]||0, color:PIE_COLORS[i%PIE_COLORS.length]}))
+    .filter(s=>s.value>0).sort((a,b)=>b.value-a.value);
+}
+
+function renderEnergyPie(){
+  const canvas = document.getElementById('energyPie');
+  if(!canvas) return;
+  const legend = document.getElementById('pieLegend');
+  const note = document.getElementById('pieNote');
+  const slices = energyByDomain();
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height, cx=W/2, cy=H/2, r=W/2-8;
+
+  if(pieAnimFrame) cancelAnimationFrame(pieAnimFrame);
+  ctx.clearRect(0,0,W,H);
+
+  if(slices.length===0){
+    ctx.strokeStyle='#2c3140'; ctx.lineWidth=14;
+    ctx.beginPath(); ctx.arc(cx,cy,r-7,0,Math.PI*2); ctx.stroke();
+    legend.innerHTML='';
+    note.textContent='No energy-costing events in the last 30 days yet. Log real work and this fills in.';
+    return;
+  }
+  note.textContent='Where your logged effort actually went — not where it was planned to go.';
+  const total = slices.reduce((s,x)=>s+x.value,0);
+  legend.innerHTML = slices.map(s=>`
+    <div class="stat-line">
+      <span class="pie-swatch" style="background:${s.color}"></span>
+      <span style="font-size:12.5px;">${s.label}</span>
+      <span style="text-align:right;font-size:12px;color:var(--ink-dim);">${Math.round(s.value/total*100)}%</span>
+    </div>`).join('');
+
+  const DUR=900, start=performance.now();
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function draw(now){
+    const t = reduced?1:Math.min(1,(now-start)/DUR);
+    const ease = 1-Math.pow(1-t,3);
+    const sweep = ease*Math.PI*2;
+    ctx.clearRect(0,0,W,H);
+    let angle = -Math.PI/2;
+    for(const s of slices){
+      const sa = (s.value/total)*Math.PI*2;
+      const drawn = Math.max(0, Math.min(sa, sweep-(angle+Math.PI/2)));
+      if(drawn>0){
+        ctx.beginPath(); ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r,angle,angle+drawn); ctx.closePath();
+        ctx.fillStyle=s.color; ctx.fill();
+      }
+      angle += sa;
+    }
+    ctx.beginPath(); ctx.arc(cx,cy,r*0.55,0,Math.PI*2);
+    ctx.fillStyle='#171a22'; ctx.fill();
+    ctx.fillStyle='#f0eee6'; ctx.font='600 13px Inter, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('30 days', cx, cy);
+    if(t<1) pieAnimFrame=requestAnimationFrame(draw);
+  }
+  pieAnimFrame=requestAnimationFrame(draw);
+}
+
+/* ---------------- EVENT SCREEN RENDER ---------------- */
+
+function renderEventGroups(){
+  const container = document.getElementById('eventGroups');
+  container.innerHTML='';
+  DOMAIN_GROUP_ORDER.forEach(group=>{
+    const wrap=document.createElement('div');
+    wrap.className='domain-group';
+    wrap.innerHTML=`<h4>${group.group}</h4>`;
+    group.domains.forEach(domainId=>{
+      const dCfg = DOMAINS.find(d=>d.id===domainId);
+      const sub=document.createElement('div');
+      sub.style.marginBottom='10px';
+      sub.innerHTML=`<div style="font-size:12px;color:var(--ink-dim);margin-bottom:6px;">${dCfg.label}</div>`;
+      const grid=document.createElement('div');
+      grid.className='event-grid';
+      EVENT_CATALOG.forEach((ev,idx)=>{
+        if(ev.domain!==domainId) return;
+        const btn=document.createElement('button');
+        btn.className='event-btn';
+        const impact=Object.entries(ev.deltas).map(([k,v])=>{
+          const c=STOCK_CONFIG.find(s=>s.id===k);
+          return `${v>0?'+':''}${v} ${c?c.label.split(' ')[0]:k}`;
+        }).join(' · ');
+        btn.innerHTML=`${ev.label}<span class="impact">${impact}</span>`;
+        btn.onclick=()=>logEvent(idx);
+        grid.appendChild(btn);
+      });
+      sub.appendChild(grid);
+      wrap.appendChild(sub);
+    });
+    container.appendChild(wrap);
+  });
+  document.getElementById('customDomain').innerHTML =
+    DOMAINS.map(d=>`<option value="${d.id}">${d.label}</option>`).join('');
+}
+
+function renderRecentLog(){
+  const c = document.getElementById('recentLog');
+  const recent=[...STATE.events].reverse().slice(0,15);
+  if(recent.length===0){ c.innerHTML='<div class="note">No events logged yet.</div>'; return; }
+  c.innerHTML = recent.map(e=>{
+    const d=new Date(e.ts);
+    return `<div class="log-item">
+      <span>${escapeHtml(e.label)} <span style="opacity:.6">· ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span></span>
+      <button class="undo-x" onclick="undoEvent('${e.id}')">Undo</button>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- PORTFOLIO ---------------- */
+
+function renderPortfolio(){
+  const container=document.getElementById('portfolioGroups');
+  container.innerHTML='';
+  ['Public & Political','Enterprise','Personal'].forEach(g=>{
+    const wrap=document.createElement('div');
+    wrap.className='card';
+    wrap.innerHTML=`<h3>${g}</h3>`;
+    STOCK_CONFIG.filter(s=>s.group===g).forEach(cfg=>{
+      const val=STATE.stocks[cfg.id];
+      const t=trendArrow(cfg.id);
+      const line=document.createElement('div');
+      line.className='stat-line';
+      line.innerHTML=`<span>${cfg.label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${val}%"></div></div>
+        <span class="trend ${t.cls}">${t.symbol} ${Math.abs(t.delta)>=1?(t.delta>0?'+':'')+t.delta.toFixed(0):''}</span>`;
+      wrap.appendChild(line);
+    });
+    container.appendChild(wrap);
+  });
+}
+
+/* ---------------- PROJECTS ---------------- */
+
+function renderProjects(){
+  const active=STATE.projects.filter(p=>p.progress<100).length;
+  document.getElementById('projectCountMeta').textContent=`${active} active of ${STATE.projects.length} total`;
+  const c=document.getElementById('projectList');
+  if(STATE.projects.length===0){ c.innerHTML='<div class="note">No projects yet.</div>'; }
+  else{
+    c.innerHTML=STATE.projects.map(p=>{
+      const dCfg=DOMAINS.find(d=>d.id===p.domain);
+      return `<div class="project-item">
+        <div class="project-head"><span>${escapeHtml(p.label)}</span><span class="pct">${p.progress}%</span></div>
+        <div class="project-domain">${dCfg?dCfg.label:p.domain}</div>
+        <div class="bar-track" style="margin-top:6px;"><div class="bar-fill" style="width:${p.progress}%"></div></div>
+        ${p.deadline?`<div class="deadline">Due ${p.deadline}</div>`:''}
+        <div class="row" style="margin-top:8px;">
+          <input type="number" min="0" max="100" value="${p.progress}" style="width:74px" onchange="updateProjectProgress('${p.id}', this.value)">
+          <button class="btn danger" onclick="deleteProject('${p.id}')">Remove</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('newProjectDomain').innerHTML=DOMAINS.map(d=>`<option value="${d.id}">${d.label}</option>`).join('');
+  document.getElementById('pauseDomain').innerHTML=DOMAINS.filter(d=>d.id!=='rest').map(d=>`<option value="${d.id}">${d.label}</option>`).join('');
+}
+
+function addProject(){
+  const label=document.getElementById('newProjectLabel').value.trim();
+  if(!label){ showToast('Give the project a name'); return; }
+  STATE.projects.push({
+    id:'p'+Date.now(),
+    label,
+    domain:document.getElementById('newProjectDomain').value,
+    progress:clamp(Number(document.getElementById('newProjectProgress').value)||0,0,100),
+    deadline:document.getElementById('newProjectDeadline').value
+  });
+  saveState();
+  document.getElementById('newProjectLabel').value='';
+  document.getElementById('newProjectProgress').value=0;
+  document.getElementById('newProjectDeadline').value='';
+  renderProjects(); renderDashboard();
+  showToast('Project added');
+}
+function updateProjectProgress(id,val){
+  const p=STATE.projects.find(x=>x.id===id);
+  if(p){ p.progress=clamp(Number(val)||0,0,100); saveState(); renderProjects(); renderDashboard(); }
+}
+function deleteProject(id){
+  STATE.projects=STATE.projects.filter(p=>p.id!==id);
+  saveState(); renderProjects(); renderDashboard();
+}
+
+/* ---------------- ADVISOR ---------------- */
+
+function runAllocator(){
+  const hours=Number(document.getElementById('hoursAvailable').value)||0;
+  if(hours<=0){ showToast('Enter available hours'); return; }
+  let pool=hours, restHours=0;
+  if(STATE.stocks.energy<50){ restHours=Math.round(pool*0.25*2)/2; pool-=restHours; }
+  const cands=DOMAINS.filter(d=>d.id!=='rest').map(d=>{
+    const cfg=STOCK_CONFIG.find(s=>s.id===d.primary);
+    const gap=Math.max(5, cfg.target-STATE.stocks[d.primary]);
+    const ds=daysSince(lastTouched(d.id))||0;
+    return {domain:d, urgency:d.weight*(1+gap/100)*(1+ds/14)};
+  });
+  const totalU=cands.reduce((s,c)=>s+c.urgency,0);
+  let allocs=cands.map(c=>({domain:c.domain, hours:Math.round((c.urgency/totalU)*pool*2)/2}));
+  const allocated=allocs.reduce((s,a)=>s+a.hours,0)+restHours;
+  const drift=Math.round((hours-allocated)*2)/2;
+  allocs.sort((a,b)=>b.hours-a.hours);
+  if(Math.abs(drift)>=0.5) allocs[0].hours=Math.max(0,allocs[0].hours+drift);
+  const top=cands.slice().sort((a,b)=>b.urgency-a.urgency)[0];
+
+  let html='';
+  if(restHours>0) html+=`<div class="stat-line"><span>Rest / Recovery</span><span style="text-align:right">${restHours} hrs</span><span></span></div>`;
+  allocs.filter(a=>a.hours>0).forEach(a=>{
+    html+=`<div class="stat-line"><span>${a.domain.label}</span><span style="text-align:right">${a.hours} hrs</span><span></span></div>`;
+  });
+  html+=`<div class="rec-box" style="margin-top:12px;"><strong>Reason:</strong> ${top.domain.label} carries the highest urgency — weighted by strategic importance, gap to target, and staleness.${restHours>0?' Energy is below 50, so recovery came off the top first.':''}</div>`;
+  document.getElementById('allocatorResult').innerHTML=html;
+}
+
+function runPausePreview(){
+  const domainId=document.getElementById('pauseDomain').value;
+  const dCfg=DOMAINS.find(d=>d.id===domainId);
+  const sCfg=STOCK_CONFIG.find(s=>s.id===dCfg.primary);
+  const current=STATE.stocks[dCfg.primary];
+  let paused=current, maintained=current;
+  for(let i=0;i<90;i++){
+    paused*= (1-sCfg.decay);
+    if(i%7===0) maintained=clamp(maintained+1.5,0,100);
+    maintained*=(1-sCfg.decay);
+  }
+  document.getElementById('pauseResult').innerHTML=`
+    <div class="stat-line"><span>${sCfg.label} today</span><span style="text-align:right">${current.toFixed(1)}</span><span></span></div>
+    <div class="stat-line"><span>…after 90 days at zero</span><span style="text-align:right">${paused.toFixed(1)}</span><span></span></div>
+    <div class="stat-line"><span>…with one weekly touch</span><span style="text-align:right">${maintained.toFixed(1)}</span><span></span></div>
+    <div class="rec-box" style="margin-top:12px;"><strong>Read:</strong> full withdrawal costs ${(current-paused).toFixed(1)} points; a single weekly touch preserves most of it. Decay math only — visible disappearance carries relationship costs this model can't price.</div>`;
+}
+
+/* ---------------- REVIEW ---------------- */
+
+function isoWeekKey(d=new Date()){
+  const date=new Date(d); date.setHours(0,0,0,0);
+  date.setDate(date.getDate()+3-(date.getDay()+6)%7);
+  const w1=new Date(date.getFullYear(),0,4);
+  const wn=1+Math.round(((date-w1)/86400000-3+(w1.getDay()+6)%7)/7);
+  return `${date.getFullYear()}-W${wn}`;
+}
+
+function renderReview(){
+  const weekKey=isoWeekKey();
+  document.getElementById('reviewWeekMeta').textContent=`${weekKey} · ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`;
+  const keyStocks=['political','trust','soaEquity','digitalEquity','liquidity','energy','learning','relational','decisionQuality','legal'];
+  document.getElementById('weeklyMovement').innerHTML=keyStocks.map(id=>{
+    const cfg=STOCK_CONFIG.find(s=>s.id===id);
+    const t=trendArrow(id,7);
+    return `<div class="stat-line"><span>${cfg.label}</span><span style="text-align:right">${t.delta>=0?'+':''}${t.delta.toFixed(1)}</span><span class="trend ${t.cls}">${t.symbol}</span></div>`;
+  }).join('');
+
+  const weekAgo=Date.now()-7*86400000;
+  const recent=STATE.events.filter(e=>new Date(e.ts).getTime()>=weekAgo);
+  const score=e=>Object.entries(e.deltas).reduce((sum,[k,v])=>{
+    const c=STOCK_CONFIG.find(s=>s.id===k);
+    return sum+v*(c?(c.weight||1):1);
+  },0);
+  let html='';
+  if(recent.length===0) html='<div class="note">No events logged this week yet.</div>';
+  else{
+    const sorted=recent.map(e=>({e,s:score(e)})).sort((a,b)=>b.s-a.s);
+    html=`<div class="alert info"><strong>Biggest win:</strong> ${escapeHtml(sorted[0].e.label)}</div>`;
+    const worst=sorted[sorted.length-1];
+    html+= worst.s<0 ? `<div class="alert"><strong>Biggest loss:</strong> ${escapeHtml(worst.e.label)}</div>`
+                     : `<div class="note">No net-negative events logged this week.</div>`;
+  }
+  document.getElementById('winLoss').innerHTML=html;
+
+  const saved=STATE.reviews[weekKey]||{};
+  ['q1','q2','q3','q4'].forEach(q=>{ document.getElementById(q).value=saved[q]||''; });
+}
+
+function saveReview(){
+  const weekKey=isoWeekKey();
+  STATE.reviews[weekKey]={
+    q1:document.getElementById('q1').value, q2:document.getElementById('q2').value,
+    q3:document.getElementById('q3').value, q4:document.getElementById('q4').value,
+    savedAt:new Date().toISOString()
+  };
+  saveState(); showToast('Review saved for '+weekKey);
+}
+
+/* ---------------- WORK / BRIDGE ---------------- */
+
+function bridgeConfigured(){ return STATE.settings.bridgeUrl && STATE.settings.bridgeSecret; }
+
+function saveBridgeSettings(toast){
+  STATE.settings.bridgeUrl=document.getElementById('bridgeUrl').value.trim();
+  STATE.settings.bridgeSecret=document.getElementById('bridgeSecret').value.trim();
+  saveState(); renderWork(); updateSecretHint();
+  if(toast) showToast('Bridge settings saved');
+}
+
+function toggleSecret(){
+  const f=document.getElementById('bridgeSecret');
+  f.type = f.type==='password' ? 'text' : 'password';
+}
+
+function updateSecretHint(){
+  const s=document.getElementById('bridgeSecret').value;
+  const hint=document.getElementById('secretHint');
+  if(!s){ hint.textContent=''; return; }
+  const issues=[];
+  if(/^\s|\s$/.test(s)) issues.push('has a leading/trailing space');
+  if(s.length<10) issues.push('quite short');
+  hint.textContent = `${s.length} characters` + (issues.length? ' — ⚠ '+issues.join(', ') : '');
+}
+
+async function callBridge(payload){
+  if(!bridgeConfigured()) throw new Error('Bridge not configured');
+  const url=STATE.settings.bridgeUrl.trim();
+  const secret=STATE.settings.bridgeSecret;
+  try{
+    const res=await fetch(url,{method:'POST',body:JSON.stringify({...payload,secret}),cache:'no-store',redirect:'follow'});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    return data;
+  }catch(postErr){
+    if(postErr && postErr.message && !/failed to fetch|load failed|network|typeerror/i.test(postErr.message)) throw postErr;
+    const params=new URLSearchParams({...payload,secret,_cb:Date.now()});
+    const res2=await fetch(url+'?'+params.toString(),{cache:'no-store',redirect:'follow'});
+    const data2=await res2.json();
+    if(data2.error) throw new Error(data2.error);
+    return data2;
+  }
+}
+
+async function loadInbox(){
+  const list=document.getElementById('inboxList');
+  if(!bridgeConfigured()){ list.innerHTML='<div class="note">Connect the bridge in Settings ⚙ first.</div>'; return; }
+  list.innerHTML='<div class="note"><span class="spinner"></span>Fetching inbox…</div>';
+  try{
+    const data=await callBridge({action:'listEmails'});
+    if(!data.emails||data.emails.length===0){ list.innerHTML='<div class="note">No recent inbox emails found.</div>'; return; }
+    window._inboxCache=data.emails;
+    list.innerHTML=data.emails.map((em,i)=>{
+      const isMtg=MEETING_KEYWORDS.test((em.subject||'')+' '+(em.snippet||''));
+      return `<div class="email-item">
+        ${isMtg?'<span class="email-badge">Meeting recommendation</span>':''}
+        <div class="email-from">${escapeHtml(em.from||'')}</div>
+        <div class="email-subject">${escapeHtml(em.subject||'(no subject)')}</div>
+        <div class="email-snippet">${escapeHtml(em.snippet||'')}</div>
+        ${isMtg?`<div class="email-actions"><button class="btn ghost small" onclick="prefillMeeting(${i})">Draft meeting from this</button></div>`:''}
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML=`<div class="note">Could not fetch inbox: ${escapeHtml(e.message)}. Run the Diagnostic in Settings ⚙ to pinpoint the layer.</div>`;
+  }
+}
+
+function prefillMeeting(idx){
+  const em=(window._inboxCache||[])[idx];
+  if(!em) return;
+  document.getElementById('mtgTitle').value='Re: '+(em.subject||'Meeting');
+  const m=(em.from||'').match(/[\w.+-]+@[\w.-]+\.\w+/);
+  if(m) document.getElementById('mtgGuests').value=m[0];
+  document.getElementById('mtgNotes').value='Following up on: '+(em.snippet||'').slice(0,200);
+  document.getElementById('mtgTitle').scrollIntoView({behavior:'smooth'});
+  showToast('Meeting drafted — set date and time');
+}
+
+async function createMeeting(){
+  const status=document.getElementById('mtgStatus');
+  const title=document.getElementById('mtgTitle').value.trim();
+  const date=document.getElementById('mtgDate').value;
+  const time=document.getElementById('mtgTime').value.trim();
+  const duration=Number(document.getElementById('mtgDuration').value)||60;
+  const guests=document.getElementById('mtgGuests').value.trim();
+  const notes=document.getElementById('mtgNotes').value.trim();
+  if(!title||!date||!/^\d{1,2}:\d{2}$/.test(time)){
+    status.textContent='Need a title, a date, and a time in HH:MM format (e.g. 14:30).'; return;
+  }
+  if(!bridgeConfigured()){ status.textContent='Connect the bridge in Settings ⚙ first.'; return; }
+  status.innerHTML='<span class="spinner"></span>Creating event…';
+  try{
+    const data=await callBridge({action:'createEvent',title,date,time,duration,guests,notes});
+    status.textContent=`Created: ${data.title||title} on ${date} at ${time}${guests?' — invites sent.':''} ✓`;
+    STATE.meetings.push({id:'m'+Date.now(), title, dateTime:date+'T'+time.padStart(5,'0')+':00', duration, guests, notes, createdAt:new Date().toISOString()});
+    STATE.meetings=STATE.meetings.filter(m=>new Date(m.dateTime).getTime()>Date.now()-7*86400000);
+    saveState(); renderMeetings(); renderDashboard();
+    showToast('Calendar event created');
+  }catch(e){ status.textContent='Failed: '+e.message; }
+}
+
+function renderMeetings(){
+  const c=document.getElementById('meetingsList');
+  const upcoming=STATE.meetings.filter(m=>new Date(m.dateTime).getTime()>Date.now()).sort((a,b)=>new Date(a.dateTime)-new Date(b.dateTime));
+  if(upcoming.length===0){ c.innerHTML='<div class="note">Meetings you create through PSOS appear here and feed your reminders.</div>'; return; }
+  c.innerHTML=upcoming.map(m=>`
+    <div class="meeting-item">
+      <div>${escapeHtml(m.title)}</div>
+      <div class="meeting-when">${new Date(m.dateTime).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})} · ${m.duration} min</div>
+    </div>`).join('');
+}
+
+function renderWork(){
+  document.getElementById('workNotConfigured').style.display = bridgeConfigured()?'none':'block';
+  renderMeetings();
+}
+
+/* ---------------- STAGED DIAGNOSTIC ---------------- */
+
+async function runDiagnostic(){
+  saveBridgeSettings(false);
+  const out=document.getElementById('diagResults');
+  const url=STATE.settings.bridgeUrl;
+  const secret=STATE.settings.bridgeSecret;
+  const lines=[];
+  const render=()=>{ out.innerHTML=lines.map(l=>`
+    <div class="diag-line"><span class="diag-mark ${l.mark}">${l.mark==='pass'?'✓':l.mark==='fail'?'✗':'…'}</span>
+    <span class="diag-body">${l.html}</span></div>`).join(''); };
+
+  if(!url){ lines.push({mark:'fail',html:'<strong>No URL saved.</strong> Paste the /exec URL first.'}); render(); return; }
+
+  // Stage 0: URL shape
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){
+    lines.push({mark:'fail',html:`<strong>URL shape looks wrong.</strong> It must start with https://script.google.com/macros/s/ and end exactly in /exec — yours ${url.endsWith('/exec')?'starts differently':'does not end in /exec'}. Re-copy it from Deploy → Manage deployments using the Copy button.`});
+    render(); return;
+  }
+  lines.push({mark:'pass',html:'URL shape is valid (ends in /exec).'}); render();
+
+  // Stage 1: reachability
+  lines.push({mark:'wait',html:'Testing reachability…'}); render();
+  try{
+    const res=await fetch(url,{cache:'no-store',redirect:'follow'});
+    await res.json();
+    lines[lines.length-1]={mark:'pass',html:'<strong>Bridge reachable.</strong> Deployment is live and answering.'};
+  }catch(e){
+    lines[lines.length-1]={mark:'fail',html:'<strong>Cannot reach the bridge at all.</strong> Either the URL is truncated (a common casualty of email/notes transfer — re-copy and send via WhatsApp self-message), or the deployment access is not set to "Anyone" (Deploy → Manage deployments → pencil → access: Anyone → New version).'};
+    render(); return;
+  }
+  render();
+
+  // Stage 2: secret
+  if(!secret){ lines.push({mark:'fail',html:'<strong>No secret saved.</strong> Enter the exact phrase from line 8 of the script.'}); render(); return; }
+  lines.push({mark:'wait',html:'Testing secret…'}); render();
+  try{
+    const params=new URLSearchParams({action:'ping',secret,_cb:Date.now()});
+    const res=await fetch(url+'?'+params.toString(),{cache:'no-store',redirect:'follow'});
+    const data=await res.json();
+    if(data.error==='Unauthorized'){
+      lines[lines.length-1]={mark:'fail',html:'<strong>Secret rejected.</strong> The bridge is fine; the phrase does not match line 8 of the live script. Copy it directly out of the editor (do not retype), and if you edited it after deploying, remember: Deploy → Manage deployments → New version, or the old secret is still live.'};
+      render(); return;
+    }
+    if(data.ok){
+      lines[lines.length-1]={mark:'pass',html:`<strong>Secret accepted.</strong> Connected as ${escapeHtml(data.email||'your account')}.`};
+    } else {
+      lines[lines.length-1]={mark:'fail',html:'Unexpected reply: '+escapeHtml(JSON.stringify(data)).slice(0,120)};
+      render(); return;
+    }
+  }catch(e){
+    lines[lines.length-1]={mark:'fail',html:'Secret test failed to run: '+escapeHtml(e.message)};
+    render(); return;
+  }
+  render();
+
+  // Stage 3: POST path
+  lines.push({mark:'wait',html:'Testing primary (POST) path…'}); render();
+  try{
+    const res=await fetch(url,{method:'POST',body:JSON.stringify({action:'ping',secret}),cache:'no-store',redirect:'follow'});
+    const data=await res.json();
+    if(data.ok) lines[lines.length-1]={mark:'pass',html:'<strong>Primary path works.</strong> Everything is fully operational.'};
+    else lines[lines.length-1]={mark:'pass',html:'Primary path returned an odd reply, but the fallback path is confirmed working — PSOS will use it automatically.'};
+  }catch(e){
+    lines[lines.length-1]={mark:'pass',html:'Primary (POST) path blocked on this network, but the fallback path works — PSOS will use it automatically. No action needed.'};
+  }
+  lines.push({mark:'pass',html:'<strong>Diagnosis complete: the bridge is usable.</strong> Try Refresh on the Work tab.'});
+  render();
+}
+
+/* ---------------- NOTES & SHARE TARGET ---------------- */
+
+function addManualNote(){
+  const t=document.getElementById('manualNote').value.trim();
+  if(!t){ showToast('Nothing to save'); return; }
+  STATE.notes.unshift({id:'n'+Date.now(), ts:new Date().toISOString(), text:t.slice(0,2000), source:'manual'});
+  if(STATE.notes.length>200) STATE.notes.pop();
+  saveState();
+  document.getElementById('manualNote').value='';
+  renderNotes(); showToast('Note saved');
+}
+
+function deleteNote(id){
+  STATE.notes=STATE.notes.filter(n=>n.id!==id);
+  saveState(); renderNotes();
+}
+
+function renderNotes(){
+  const c=document.getElementById('notesList');
+  if(STATE.notes.length===0){ c.innerHTML='<div class="note">No captured notes yet.</div>'; return; }
+  c.innerHTML=STATE.notes.slice(0,20).map(n=>`
+    <div class="note-item">
+      <div class="note-text">${escapeHtml(n.text)}</div>
+      <div class="note-meta">
+        <span>${new Date(n.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${n.source==='share'?'shared in':'manual'}</span>
+        <button class="undo-x" onclick="deleteNote('${n.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function handleShareTarget(){
+  const p=new URLSearchParams(location.search);
+  const parts=[p.get('share_title'), p.get('share_text'), p.get('share_url')].filter(Boolean);
+  if(parts.length===0) return;
+  const text=parts.join('\n').trim().slice(0,2000);
+  if(text){
+    STATE.notes.unshift({id:'n'+Date.now(), ts:new Date().toISOString(), text, source:'share'});
+    if(STATE.notes.length>200) STATE.notes.pop();
+    saveState();
+    showToast('Shared content captured as a note');
+    showScreen('events');
+  }
+  history.replaceState(null,'',location.pathname);
+}
+
+/* ---------------- NOTIFICATIONS ---------------- */
+
+function toggleNotifications(on){
+  if(on){
+    if(!('Notification' in window)){
+      document.getElementById('notifyStatus').textContent='This browser does not support notifications.';
+      document.getElementById('notifyToggle').checked=false; return;
+    }
+    Notification.requestPermission().then(perm=>{
+      if(perm==='granted'){
+        STATE.settings.notifyEnabled=true; saveState();
+        document.getElementById('notifyStatus').textContent='Reminders enabled. They fire while PSOS is open or recently used — a limitation of installing without an app store, not a bug.';
+        checkReminders();
+      } else {
+        STATE.settings.notifyEnabled=false; saveState();
+        document.getElementById('notifyToggle').checked=false;
+        document.getElementById('notifyStatus').textContent='Permission was not granted. Enable notifications for this site in Chrome → Site settings, then try again.';
+      }
+    });
+  } else {
+    STATE.settings.notifyEnabled=false; saveState();
+    document.getElementById('notifyStatus').textContent='Reminders off.';
+  }
+}
+
+function notifyOnce(key, title, body){
+  const today=todayStr();
+  if(STATE.notified[key]===today) return;
+  try{
+    new Notification(title,{body, icon:'icons/icon-192.png', tag:key});
+    STATE.notified[key]=today;
+    // prune old entries
+    Object.keys(STATE.notified).forEach(k=>{ if(STATE.notified[k]!==today) delete STATE.notified[k]; });
+    saveState();
+  }catch(e){ /* notification constructor can fail on some platforms; alerts card still covers it */ }
+}
+
+function checkReminders(){
+  if(!STATE.settings.notifyEnabled || !('Notification' in window) || Notification.permission!=='granted') return;
+  const now=Date.now();
+  STATE.projects.forEach(p=>{
+    if(!p.deadline || p.progress>=100) return;
+    const dd=Math.ceil((new Date(p.deadline).getTime()-now)/86400000);
+    if(dd>=0 && dd<=2) notifyOnce('proj-'+p.id, 'Deadline approaching', `${p.label} due in ${dd===0?'less than a day':dd+' day'+(dd===1?'':'s')} — at ${p.progress}%.`);
+  });
+  STATE.meetings.forEach(m=>{
+    const t=new Date(m.dateTime).getTime();
+    if(t>now && t-now<24*3600000) notifyOnce('mtg-'+m.id, 'Upcoming meeting', `${m.title} at ${new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}.`);
+  });
+}
+
+/* ---------------- SETTINGS / BACKUP ---------------- */
+
+function renderSettings(){
+  document.getElementById('bridgeUrl').value=STATE.settings.bridgeUrl||'';
+  document.getElementById('bridgeSecret').value=STATE.settings.bridgeSecret||'';
+  document.getElementById('notifyToggle').checked=!!STATE.settings.notifyEnabled;
+  document.getElementById('schemaVer').textContent=STATE.schema;
+  document.getElementById('eventCount').textContent=STATE.events.length;
+  updateSecretHint();
+}
+
+function exportBackup(){
+  const blob=new Blob([JSON.stringify(STATE,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='psos-backup-'+todayStr()+'.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+  document.getElementById('dataStatus').textContent='Backup exported. Keep it somewhere safe (Drive, email to self).';
+}
+
+function importBackup(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(reader.result);
+      if(!parsed.stocks || !parsed.events) throw new Error('Not a PSOS backup file');
+      STATE=migrate(parsed);
+      saveState(); processElapsedDays(); renderAll(); renderSettings();
+      document.getElementById('dataStatus').textContent='Backup restored. All data replaced with the imported copy.';
+      showToast('Backup restored');
+    }catch(e){
+      document.getElementById('dataStatus').textContent='Import failed: '+e.message;
+    }
+  };
+  reader.readAsText(file);
+  document.getElementById('importFile').value='';
+}
+
+function resetApp(){
+  if(!confirm('This erases ALL PSOS data on this device — events, projects, notes, settings. Export a backup first?\n\nPress OK only if you are sure.')) return;
+  if(!confirm('Final confirmation: erase everything?')) return;
+  STATE=seedState(); saveState(); renderAll(); renderSettings();
+  showToast('PSOS reset to fresh state');
+}
+
+/* ---------------- INIT ---------------- */
+
+function renderAll(){
+  renderDashboard();
+  renderEventGroups();
+  renderRecentLog();
+  renderNotes();
+  renderPortfolio();
+  renderProjects();
+  renderReview();
+  renderEnergyPie();
+  renderWork();
+}
+
+processElapsedDays();
+handleShareTarget();
+renderAll();
+checkReminders();
+
+document.getElementById('bridgeSecret').addEventListener('input', updateSecretHint);
+
+setInterval(()=>{
+  const el=document.getElementById('dateMeta');
+  if(el && document.getElementById('screen-dashboard').classList.contains('active')){
+    const now=new Date();
+    el.textContent=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' · '+now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  }
+}, 30000);
+setInterval(checkReminders, 15*60000);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW registration failed', err));
+  });
+}
+</script>
+</body>
+</html>
