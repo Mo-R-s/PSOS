@@ -1,4 +1,5 @@
-const CACHE_NAME = 'psos-cache-v6';
+const CACHE_NAME = 'psos-cache-v6-aether';
+
 const ASSETS = [
   './',
   './index.html',
@@ -26,7 +27,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Never intercept cross-origin traffic (e.g. the Gmail/Calendar bridge).
   if (new URL(event.request.url).origin !== self.location.origin) return;
   if (event.request.method !== 'GET') return;
   event.respondWith(
