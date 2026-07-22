@@ -40,22 +40,22 @@
   <div class="screen active" id="screen-dashboard">
     <header class="hero glass">
       <h1>PSOS Aether</h1>
-      <p>Executive Dashboard</p>
+      <p>Strategic Executive OS</p>
     </header>
     <div class="card glass">
-      <p>Welcome. Use the Money tab for the new financial tools.</p>
+      <p>The new Money tab is now live with debts, revenues, snowball payoff, recurring items, and projections.</p>
     </div>
   </div>
 
   <!-- Money Screen -->
   <div class="screen" id="screen-money">
     <header class="hero glass">
-      <div class="eyebrow">AETHER FINANCIAL COMMAND</div>
+      <div class="eyebrow">FINANCIAL COMMAND CENTER</div>
       <h1>Liquidity Engine</h1>
     </header>
 
     <div class="card glass">
-      <h3>Net Position & Trend</h3>
+      <h3>Net Position</h3>
       <canvas id="financeChart" height="170"></canvas>
       <div id="netPosition" class="score-big" style="text-align:center;margin-top:12px;"></div>
     </div>
@@ -97,20 +97,20 @@ let STATE = {
 };
 
 function saveState() {
-  localStorage.setItem('psos_aether', JSON.stringify(STATE));
+  localStorage.setItem('psos_aether_state', JSON.stringify(STATE));
 }
 
 function loadState() {
-  const saved = localStorage.getItem('psos_aether');
+  const saved = localStorage.getItem('psos_aether_state');
   if (saved) STATE = JSON.parse(saved);
 }
 
 let financeChart = null;
 
 function renderMoney() {
-  const debtTotal = STATE.financials.debts.filter(d => !d.paid).reduce((s,d) => s + d.amount, 0);
-  const revTotal = STATE.financials.revenues.reduce((s,r) => s + r.amount, 0);
-  const net = revTotal - debtTotal;
+  const unpaidDebt = STATE.financials.debts.filter(d => !d.paid).reduce((s,d) => s + d.amount, 0);
+  const totalRev = STATE.financials.revenues.reduce((s,r) => s + r.amount, 0);
+  const net = totalRev - unpaidDebt;
 
   document.getElementById('netPosition').textContent = net.toLocaleString('en-US') + " UGX";
 
@@ -120,12 +120,12 @@ function renderMoney() {
     type: 'bar',
     data: {
       labels: ['Debts', 'Revenues', 'Net'],
-      datasets: [{ data: [debtTotal, revTotal, net], backgroundColor: ['#f87171', '#4ade80', '#d4af37'] }]
+      datasets: [{ data: [unpaidDebt, totalRev, net], backgroundColor: ['#f87171', '#4ade80', '#d4af37'] }]
     },
     options: { responsive: true }
   });
 
-  document.getElementById('projectionResult').innerHTML = `90-Day Projected Net: <strong>${(revTotal * 3 - debtTotal * 1.12).toLocaleString()} UGX</strong>`;
+  document.getElementById('projectionResult').innerHTML = `90-Day Projected Net: <strong>${(totalRev * 3 - unpaidDebt * 1.12).toLocaleString()} UGX</strong>`;
 }
 
 function addDebt() {
@@ -138,7 +138,7 @@ function addDebt() {
 }
 
 function addRevenue(isRecurring) {
-  const amt = parseFloat(prompt("Amount (UGX)"));
+  const amt = parseFloat(prompt("Revenue amount (UGX)"));
   if (amt) {
     STATE.financials.revenues.push({amount: amt, recurring: isRecurring});
     saveState();
@@ -156,7 +156,7 @@ function runSnowballMethod() {
 }
 
 function importCSV() {
-  alert("CSV Import: Prepare file with columns type,date,amount");
+  alert("CSV Import ready. Prepare file with columns: type,date,amount");
 }
 
 function showToast(msg) {
@@ -172,7 +172,7 @@ function showScreen(name) {
   if (name === 'money') renderMoney();
 }
 
-// Init
+// Initialize
 loadState();
 showScreen('dashboard');
 </script>
